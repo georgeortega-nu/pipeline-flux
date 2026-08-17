@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 8% 4%;
+    --foreground: 40 12% 91%;
+    --muted: 240 6% 9%;
+    --muted-foreground: 240 5% 52%;
+    --popover: 240 9% 6%;
+    --popover-foreground: 40 12% 91%;
+    --border: 240 6% 15%;
+    --input: 240 6% 15%;
+    --primary: 38 91% 55%;
+    --primary-foreground: 240 10% 6%;
+    --secondary: 240 6% 11%;
+    --secondary-foreground: 40 12% 88%;
+    --accent: 240 6% 13%;
+    --accent-foreground: 40 12% 92%;
+    --destructive: 12 62% 42%;
+    --destructive-foreground: 40 12% 92%;
+    --ring: 38 91% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.28);
+  }
+
+  :focus-visible {
+    outline: 1px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* micro-labels styled like markings on an instrument face */
+  .gauge {
+    @apply font-mono text-[10px] uppercase tracking-gauge text-muted-foreground;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .rule {
+    @apply h-px w-full bg-border;
+  }
+
+  .field-backdrop {
+    background:
+      radial-gradient(120% 78% at 50% 8%, hsl(228 32% 16% / 0.55) 0%, transparent 62%),
+      radial-gradient(80% 55% at 50% 96%, hsl(36 70% 26% / 0.28) 0%, transparent 68%),
+      linear-gradient(180deg, #0a0b0f 0%, #08090b 52%, #06070a 100%);
+  }
+
+  .vignette {
+    background: radial-gradient(105% 82% at 50% 46%, transparent 42%, rgb(0 0 0 / 0.55) 100%);
+  }
+
+  .panel {
+    background: linear-gradient(180deg, hsl(240 9% 6% / 0.92) 0%, hsl(240 9% 5% / 0.94) 100%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+}
+
+/* scrollbars inside the control rail */
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: hsl(240 6% 18%);
+  border-radius: 999px;
+}
