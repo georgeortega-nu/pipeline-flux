@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils'
 
 const Select = SelectPrimitive.Root
 const SelectValue = SelectPrimitive.Value
+/** SelectLabel is only legal inside a group, so the group has to be exported too. */
+const SelectGroup = SelectPrimitive.Group
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
@@ -85,4 +87,13 @@ const SelectSeparator = React.forwardRef<
 ))
 SelectSeparator.displayName = 'SelectSeparator'
 
-export { Select, SelectContent, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue }
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+}

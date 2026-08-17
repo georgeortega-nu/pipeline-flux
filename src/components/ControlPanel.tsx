@@ -3,7 +3,16 @@ import { Pause, Play, RotateCcw, Save, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { TRANSITION_LABELS, ratioToHire } from '@/lib/stages'
@@ -81,19 +90,27 @@ export function ControlPanel({
             <SelectValue placeholder="Custom">{active?.name ?? 'Custom'}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectLabel>Built in</SelectLabel>
-            {builtins.map((preset) => (
-              <SelectItem key={preset.id} value={preset.id}>
-                {preset.name}
-              </SelectItem>
-            ))}
-            {saved.length > 0 && <SelectSeparator />}
-            {saved.length > 0 && <SelectLabel>Saved</SelectLabel>}
-            {saved.map((preset) => (
-              <SelectItem key={preset.id} value={preset.id}>
-                {preset.name}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel>Built in</SelectLabel>
+              {builtins.map((preset) => (
+                <SelectItem key={preset.id} value={preset.id}>
+                  {preset.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+            {saved.length > 0 && (
+              <>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel>Saved</SelectLabel>
+                  {saved.map((preset) => (
+                    <SelectItem key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </>
+            )}
           </SelectContent>
         </Select>
 
