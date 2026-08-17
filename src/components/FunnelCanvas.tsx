@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FunnelApp } from '@/three/FunnelApp'
 import type { FunnelConfig, SimStats } from '@/lib/types'
 
@@ -15,6 +15,7 @@ interface Props {
 export function FunnelCanvas({ config, playing, reducedMotion, resetToken, onStats, onTick, onReject }: Props) {
   const holder = useRef<HTMLDivElement | null>(null)
   const app = useRef<FunnelApp | null>(null)
+  const [failure, setFailure] = useState<string | null>(null)
 
   // keep callbacks in refs so the scene is never torn down just to rebind them
   const handlers = useRef({ onStats, onTick, onReject })
@@ -25,13 +26,23 @@ export function FunnelCanvas({ config, playing, reducedMotion, resetToken, onSta
 
   useEffect(() => {
     if (!holder.current) return
-    const instance = new FunnelApp(holder.current, {
-      reducedMotion,
-      onStats: (s) => handlers.current.onStats(s),
-      onTick: (d) => handlers.current.onTick(d),
-      onReject: (s) => handlers.current.onReject(s),
-    })
-    instance.setConfig(initial.current)
+    let instance: FunnelApp
+    try {
+      instance = new FunnelApp(holder.current, {
+        reducedMotion,
+        onStats: (s) => handlers.current.onStats(s),
+        onTick: (d) => handlers.current.onTick(d),
+        onReject: (s) => handlers.current.onReject(s),
+      })
+      instance.setConfig(initial.current)
+    } catch (error) {
+      // WebGL context creation throws outright when acceleration is unavailable or
+      // blocklisted. Keep the surrounding UI alive and say so.
+      const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+      console.error('Pipeline Flux could not start the WebGL scene:', error)
+      setFailure(message)
+      return
+    }
     app.current = instance
     return () => {
       instance.dispose()
@@ -65,5 +76,25 @@ export function FunnelCanvas({ config, playing, reducedMotion, resetToken, onSta
     app.current?.reset()
   }, [resetToken])
 
-  return <div ref={holder} className="absolute inset-0" />
+  return (
+    <div ref={holder} className="absolute inset-0">
+      {failure && (
+        <div className="absolute inset-0 flex items-center justify-center p-8">
+          <div className="max-w-md">
+            <p className="gauge text-primary">Scene unavailable</p>
+            <p className="mt-2 font-mono text-[11px] leading-relaxed tracking-wide text-foreground/85">
+              The 3D scene could not initialize, so the controls are shown without it.
+            </p>
+            <pre className="mt-3 whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-muted-foreground">
+              {failure}
+            </pre>
+            <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-muted-foreground">
+              This is usually WebGL being disabled. Check chrome://gpu, or enable “Use graphics acceleration when
+              available” in Chrome settings and reload.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
