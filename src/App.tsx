@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
+import { CohortView } from '@/components/CohortView'
 import { ControlPanel } from '@/components/ControlPanel'
 import { FunnelCanvas } from '@/components/FunnelCanvas'
 import { Hud } from '@/components/Hud'
@@ -12,6 +13,7 @@ import { AudioEngine } from '@/lib/audio'
 import { BUILTIN_PRESETS, DEFAULT_CONFIG, STAGES } from '@/lib/stages'
 import * as store from '@/lib/storage'
 import type { FunnelConfig, Preset, SimStats } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 const EMPTY_STATS: SimStats = {
   fps: 0,
@@ -20,12 +22,18 @@ const EMPTY_STATS: SimStats = {
   markers: [],
 }
 
+function readRoute(): string {
+  const raw = window.location.hash.replace(/^#\/?/, '')
+  return raw === 'cohort' ? 'cohort' : 'field'
+}
+
 export default function App() {
   const systemReduced = useReducedMotion()
   const [motionOverride, setMotionOverride] = useState(false)
   const reducedMotion = systemReduced && !motionOverride
   const isDesktop = useMediaQuery('(min-width: 768px)')
 
+  const [route, setRoute] = useState(readRoute)
   const [config, setConfig] = useState<FunnelConfig>(DEFAULT_CONFIG)
   const [presets, setPresets] = useState<Preset[]>(BUILTIN_PRESETS)
   const [playing, setPlaying] = useState(true)
@@ -35,6 +43,12 @@ export default function App() {
 
   const audio = useRef<AudioEngine | null>(null)
   if (!audio.current) audio.current = new AudioEngine()
+
+  useEffect(() => {
+    const onHashChange = () => setRoute(readRoute())
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
 
   // hydrate from IndexedDB before the scene starts
   useEffect(() => {
@@ -146,13 +160,17 @@ export default function App() {
     ],
   )
 
+  const isCohort = route === 'cohort'
+
   return (
     <main className="field-backdrop relative h-full w-full overflow-hidden">
-      <div className="absolute inset-0">
+      {/* The scene stays mounted across routes so returning to the field does not
+          rebuild the world or lose the running counts. */}
+      <div className={cn('absolute inset-0', isCohort && 'pointer-events-none opacity-0')} aria-hidden={isCohort}>
         {hydrated && (
           <FunnelCanvas
             config={config}
-            playing={playing}
+            playing={playing && !isCohort}
             reducedMotion={reducedMotion}
             resetToken={resetToken}
             onStats={onStats}
@@ -162,29 +180,61 @@ export default function App() {
         )}
       </div>
 
-      <div className="vignette pointer-events-none absolute inset-0 z-[5]" aria-hidden="true" />
-
-      <StageRail markers={stats.markers} counts={stats.counts} />
-      <Hud stats={stats} passRates={config.passRates} reducedMotion={reducedMotion} />
-
-      {isDesktop ? (
-        <aside className="panel absolute right-6 top-6 bottom-6 z-30 w-[336px] border border-border">{panel}</aside>
-      ) : (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="primary" className="pointer-events-auto h-10 px-5">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Controls
-              </Button>
-            </SheetTrigger>
-            <SheetContent>
-              <SheetTitle className="sr-only">Simulation controls</SheetTitle>
-              {panel}
-            </SheetContent>
-          </Sheet>
-        </div>
+      {!isCohort && (
+        <>
+          <div className="vignette pointer-events-none absolute inset-0 z-[5]" aria-hidden="true" />
+          <StageRail markers={stats.markers} counts={stats.counts} />
+          <Hud stats={stats} passRates={config.passRates} reducedMotion={reducedMotion} />
+        </>
       )}
+
+      {isCohort && <CohortView config={config} presets={presets} />}
+
+      <Nav route={route} />
+
+      {!isCohort &&
+        (isDesktop ? (
+          <aside className="panel absolute right-6 top-6 bottom-6 z-30 w-[336px] border border-border">{panel}</aside>
+        ) : (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="primary" className="pointer-events-auto h-10 px-5">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Controls
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetTitle className="sr-only">Simulation controls</SheetTitle>
+                {panel}
+              </SheetContent>
+            </Sheet>
+          </div>
+        ))}
     </main>
+  )
+}
+
+function Nav({ route }: { route: string }) {
+  const item = (href: string, key: string, label: string) => (
+    <a
+      key={key}
+      href={href}
+      aria-current={route === key ? 'page' : undefined}
+      className={cn(
+        'px-3 py-1.5 font-mono text-[10px] uppercase tracking-gauge transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        route === key ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {label}
+    </a>
+  )
+
+  return (
+    <nav className="absolute left-5 top-5 z-40 flex border border-border md:left-7 md:top-7">
+      {item('#/field', 'field', 'Field')}
+      <span className="w-px bg-border" aria-hidden="true" />
+      {item('#/cohort', 'cohort', 'Cohort')}
+    </nav>
   )
 }
