@@ -9,11 +9,12 @@ interface Props {
 
 export function Hud({ stats, passRates, reducedMotion }: Props) {
   const ratio = ratioToHire(passRates)
-  const ratioLabel = Number.isFinite(ratio) ? ratio.toFixed(1) : '∞'
+  const ratioLabel = Number.isFinite(ratio) ? ratio.toFixed(1) : 'n/a'
 
   return (
     <>
-      <header className="pointer-events-none absolute left-5 top-5 z-20 md:left-7 md:top-7">
+      {/* sits below the route nav, which owns the top-left corner */}
+      <header className="pointer-events-none absolute left-5 top-[62px] z-20 md:left-7 md:top-[70px]">
         <h1 className="font-mono text-[13px] uppercase tracking-wider2 text-foreground">Pipeline Flux</h1>
         <p className="mt-1 max-w-[15rem] font-mono text-[10px] leading-relaxed tracking-gauge text-muted-foreground">
           Candidates as particles · membranes as stages
