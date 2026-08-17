@@ -4,11 +4,22 @@ import { membraneFragment, membraneVertex, wallFragment, wallVertex } from './sh
 
 const ACCENT = 0xf5a524
 const COOL = 0x7f97c4
+const REJECT_FLASH = 0xd8593a
+const HIRE_FLASH = 0xfff4dc
+const HIT_SLOTS = 3
+
+function makeHits(): THREE.Vector3[] {
+  const hits: THREE.Vector3[] = []
+  for (let i = 0; i < HIT_SLOTS; i++) hits.push(new THREE.Vector3(0, 0, -100))
+  return hits
+}
 
 /** The static furniture: stage membranes, the tapering funnel wall, the collector plate. */
 export class Funnel {
   readonly group = new THREE.Group()
-  readonly membraneMaterials: THREE.ShaderMaterial[] = []
+  /** index 0..4 are membranes for STAGES 1..5, index 5 is the collector plate */
+  private discs: THREE.ShaderMaterial[] = []
+  private hitCursor: number[] = []
   private disposables: Array<THREE.BufferGeometry | THREE.Material> = []
 
   constructor() {
@@ -26,9 +37,11 @@ export class Funnel {
         blending: THREE.AdditiveBlending,
         uniforms: {
           uColor: { value: new THREE.Color(last ? ACCENT : COOL) },
+          uFlashColor: { value: new THREE.Color(REJECT_FLASH) },
           uOpacity: { value: last ? 1.0 : 0.62 },
           uTime: { value: 0 },
           uPhase: { value: i * 1.7 },
+          uHits: { value: makeHits() },
         },
       })
       const disc = new THREE.Mesh(geo, mat)
@@ -36,7 +49,8 @@ export class Funnel {
       disc.position.y = stage.y
       disc.renderOrder = 2
       this.group.add(disc)
-      this.membraneMaterials.push(mat)
+      this.discs.push(mat)
+      this.hitCursor.push(0)
       this.disposables.push(geo, mat)
 
       // hairline rim so each membrane reads as a discrete instrument plane
@@ -93,9 +107,11 @@ export class Funnel {
       blending: THREE.AdditiveBlending,
       uniforms: {
         uColor: { value: new THREE.Color(0xfff0d2) },
+        uFlashColor: { value: new THREE.Color(HIRE_FLASH) },
         uOpacity: { value: 1.35 },
         uTime: { value: 0 },
         uPhase: { value: 0 },
+        uHits: { value: makeHits() },
       },
     })
     const plate = new THREE.Mesh(plateGeo, plateMat)
@@ -103,7 +119,8 @@ export class Funnel {
     plate.position.y = PLATE_Y
     plate.renderOrder = 2
     this.group.add(plate)
-    this.membraneMaterials.push(plateMat)
+    this.discs.push(plateMat)
+    this.hitCursor.push(0)
     this.disposables.push(plateGeo, plateMat)
 
     // spawn aperture at the top, drawn as a bare rim
@@ -123,8 +140,33 @@ export class Funnel {
     this.disposables.push(apertureGeo, apertureMat)
   }
 
+  private writeHit(index: number, localX: number, localY: number, time: number) {
+    const mat = this.discs[index]
+    if (!mat) return
+    const hits = mat.uniforms.uHits.value as THREE.Vector3[]
+    const slot = this.hitCursor[index] % HIT_SLOTS
+    this.hitCursor[index] = slot + 1
+    hits[slot].set(localX, localY, time)
+  }
+
+  /**
+   * A rejection at stage 1..5. World x/z are converted to local disc space,
+   * where the circle geometry's y axis maps to negative world z.
+   */
+  flash(stage: number, x: number, z: number, time: number) {
+    const index = stage - 1
+    if (index < 0 || index >= STAGES.length - 1) return
+    const radius = STAGES[stage].radius
+    this.writeHit(index, x / radius, -z / radius, time)
+  }
+
+  /** A hire landing on the collector plate. */
+  burst(time: number) {
+    this.writeHit(this.discs.length - 1, 0, 0, time)
+  }
+
   update(time: number) {
-    for (const mat of this.membraneMaterials) {
+    for (const mat of this.discs) {
       mat.uniforms.uTime.value = time
     }
   }
@@ -132,6 +174,7 @@ export class Funnel {
   dispose() {
     for (const item of this.disposables) item.dispose()
     this.disposables.length = 0
+    this.discs.length = 0
     this.group.clear()
   }
 }

@@ -10,7 +10,8 @@ const QUAD = new Float32Array([
 /**
  * One draw call for every candidate on screen. A six-vertex quad is instanced
  * MAX_INSTANCES times and billboarded in the vertex shader; per-candidate data
- * rides along as dynamic instanced attributes.
+ * rides along as dynamic instanced attributes, including velocity so the quad
+ * can be stretched into a motion streak.
  */
 export class ParticleField {
   readonly geometry: THREE.InstancedBufferGeometry
@@ -18,12 +19,14 @@ export class ParticleField {
   readonly mesh: THREE.Mesh
 
   private offsets = new Float32Array(MAX_INSTANCES * 3)
+  private velocities = new Float32Array(MAX_INSTANCES * 3)
   private progress = new Float32Array(MAX_INSTANCES)
   private states = new Float32Array(MAX_INSTANCES)
   private alphas = new Float32Array(MAX_INSTANCES)
   private seeds = new Float32Array(MAX_INSTANCES)
 
   private aOffset: THREE.InstancedBufferAttribute
+  private aVelocity: THREE.InstancedBufferAttribute
   private aProgress: THREE.InstancedBufferAttribute
   private aState: THREE.InstancedBufferAttribute
   private aAlpha: THREE.InstancedBufferAttribute
@@ -34,12 +37,14 @@ export class ParticleField {
     this.geometry.setAttribute('position', new THREE.Float32BufferAttribute(QUAD, 3))
 
     this.aOffset = new THREE.InstancedBufferAttribute(this.offsets, 3).setUsage(THREE.DynamicDrawUsage)
+    this.aVelocity = new THREE.InstancedBufferAttribute(this.velocities, 3).setUsage(THREE.DynamicDrawUsage)
     this.aProgress = new THREE.InstancedBufferAttribute(this.progress, 1).setUsage(THREE.DynamicDrawUsage)
     this.aState = new THREE.InstancedBufferAttribute(this.states, 1).setUsage(THREE.DynamicDrawUsage)
     this.aAlpha = new THREE.InstancedBufferAttribute(this.alphas, 1).setUsage(THREE.DynamicDrawUsage)
     this.aSeed = new THREE.InstancedBufferAttribute(this.seeds, 1).setUsage(THREE.DynamicDrawUsage)
 
     this.geometry.setAttribute('aOffset', this.aOffset)
+    this.geometry.setAttribute('aVelocity', this.aVelocity)
     this.geometry.setAttribute('aProgress', this.aProgress)
     this.geometry.setAttribute('aState', this.aState)
     this.geometry.setAttribute('aAlpha', this.aAlpha)
@@ -56,8 +61,11 @@ export class ParticleField {
       depthTest: true,
       blending: THREE.AdditiveBlending,
       uniforms: {
-        uSize: { value: 0.34 },
+        uSize: { value: 0.32 },
         uTime: { value: 0 },
+        uStretch: { value: 0.085 },
+        uFogNear: { value: 20 },
+        uFogFar: { value: 40 },
         uCold: { value: new THREE.Color(0x2f5390) },
         uWarm: { value: new THREE.Color(0xf5a524) },
         uHot: { value: new THREE.Color(0xfff6e2) },
@@ -70,11 +78,26 @@ export class ParticleField {
     this.mesh.renderOrder = 4
   }
 
-  write(i: number, x: number, y: number, z: number, progress: number, state: number, alpha: number, seed: number) {
+  write(
+    i: number,
+    x: number,
+    y: number,
+    z: number,
+    vx: number,
+    vy: number,
+    vz: number,
+    progress: number,
+    state: number,
+    alpha: number,
+    seed: number,
+  ) {
     const o = i * 3
     this.offsets[o] = x
     this.offsets[o + 1] = y
     this.offsets[o + 2] = z
+    this.velocities[o] = vx
+    this.velocities[o + 1] = vy
+    this.velocities[o + 2] = vz
     this.progress[i] = progress
     this.states[i] = state
     this.alphas[i] = alpha
@@ -84,6 +107,7 @@ export class ParticleField {
   commit(count: number, time: number) {
     this.geometry.instanceCount = count
     this.aOffset.needsUpdate = true
+    this.aVelocity.needsUpdate = true
     this.aProgress.needsUpdate = true
     this.aState.needsUpdate = true
     this.aAlpha.needsUpdate = true
@@ -93,6 +117,11 @@ export class ParticleField {
 
   setSize(size: number) {
     this.material.uniforms.uSize.value = size
+  }
+
+  setFog(near: number, far: number) {
+    this.material.uniforms.uFogNear.value = near
+    this.material.uniforms.uFogFar.value = far
   }
 
   dispose() {
