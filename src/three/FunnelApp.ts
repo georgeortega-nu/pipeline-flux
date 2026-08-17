@@ -74,7 +74,11 @@ export class FunnelApp {
     this.scene.add(this.particles.mesh)
 
     this.sim.onTick = (depth) => this.options.onTick?.(depth)
-    this.sim.onReject = (stage) => this.options.onReject?.(stage)
+    this.sim.onReject = (stage, x, z) => {
+      this.funnel.flash(stage, x, z, this.clock.elapsedTime)
+      this.options.onReject?.(stage)
+    }
+    this.sim.onHire = () => this.funnel.burst(this.clock.elapsedTime)
 
     this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown)
     window.addEventListener('pointermove', this.onPointerMove)
@@ -97,7 +101,7 @@ export class FunnelApp {
     }
   }
 
-  // ——— input ———
+  // input
 
   private onPointerDown = (event: PointerEvent) => {
     if (this.dragging) return
@@ -136,7 +140,7 @@ export class FunnelApp {
     event.preventDefault()
   }
 
-  // ——— layout ———
+  // layout
 
   private resize() {
     const width = Math.max(1, this.container.clientWidth)
@@ -150,7 +154,8 @@ export class FunnelApp {
     const byWidth = TARGET_WIDTH / 2 / Math.tan(fov / 2) / aspect
     this.distance = Math.max(byHeight, byWidth) * this.zoom
     this.camera.updateProjectionMatrix()
-    this.particles.setSize(aspect < 0.8 ? 0.4 : 0.34)
+    this.particles.setSize(aspect < 0.8 ? 0.38 : 0.32)
+    this.particles.setFog(this.distance - 7, this.distance + 14)
     this.updateCamera(1)
   }
 
@@ -165,7 +170,7 @@ export class FunnelApp {
     this.camera.lookAt(target)
   }
 
-  // ——— loop ———
+  // loop
 
   private loop = () => {
     if (this.disposed) return
@@ -204,7 +209,20 @@ export class FunnelApp {
       const p = pool[i]
       if (!p.active || p.alpha <= 0.001) continue
       const pos = p.body.position
-      this.particles.write(n, pos.x, pos.y, pos.z, this.sim.depthOf(p), p.state, p.alpha, p.seed)
+      const vel = p.body.velocity
+      this.particles.write(
+        n,
+        pos.x,
+        pos.y,
+        pos.z,
+        vel.x,
+        vel.y,
+        vel.z,
+        this.sim.depthOf(p),
+        p.state,
+        p.alpha,
+        p.seed,
+      )
       n++
     }
     this.particles.commit(n, this.clock.elapsedTime)
@@ -258,7 +276,7 @@ export class FunnelApp {
     })
   }
 
-  // ——— public api ———
+  // public api
 
   setConfig(config: { intake: number; maxParticles: number; passRates: number[] }) {
     this.sim.intake = config.intake
@@ -318,6 +336,7 @@ export class FunnelApp {
     this.renderer.domElement.removeEventListener('webglcontextlost', this.onContextLost)
     this.sim.onTick = null
     this.sim.onReject = null
+    this.sim.onHire = null
     this.sim.dispose()
     this.particles.dispose()
     this.funnel.dispose()

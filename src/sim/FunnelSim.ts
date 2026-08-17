@@ -50,7 +50,8 @@ export class FunnelSim {
   passRates = [0.55, 0.52, 0.6, 0.68, 0.85]
 
   onTick: ((depth: number) => void) | null = null
-  onReject: ((stage: number) => void) | null = null
+  onReject: ((stage: number, x: number, z: number) => void) | null = null
+  onHire: (() => void) | null = null
 
   private free: number[] = []
   private spawnAcc = 0
@@ -158,6 +159,7 @@ export class FunnelSim {
       if (event.body === this.plate) {
         particle.state = P_HIRED
         particle.timer = 0
+        if (this.onHire) this.onHire()
       } else {
         this.deflect(particle)
       }
@@ -169,10 +171,12 @@ export class FunnelSim {
   private deflect(particle: Particle) {
     particle.state = P_REJECTED
     particle.timer = 0
+    const contactX = particle.body.position.x
+    const contactZ = particle.body.position.z
     const angle = this.rand() * Math.PI * 2
     const force = 2.4 + this.rand() * 2.2
     particle.body.applyImpulse(new CANNON.Vec3(Math.cos(angle) * force, 0.7 + this.rand() * 0.6, Math.sin(angle) * force))
-    if (this.onReject) this.onReject(particle.rejectAt)
+    if (this.onReject) this.onReject(particle.rejectAt, contactX, contactZ)
   }
 
   private spawn() {
@@ -318,6 +322,7 @@ export class FunnelSim {
       p.timer = 0
       p.seed = rand()
       p.body.position.set(Math.cos(angle) * radius, y, Math.sin(angle) * radius)
+      // a frozen field should read as still, so no velocity streaks
       p.body.velocity.set(0, 0, 0)
       this.activeCount++
       this.counts[0]++
