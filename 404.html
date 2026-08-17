@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
+    <meta name="theme-color" content="#08090b" />
+    <meta name="color-scheme" content="dark" />
+    <title>Pipeline Flux — 3D recruiting funnel</title>
+    <meta
+      name="description"
+      content="A physics-driven 3D visualization of a recruiting funnel. Candidates fall as particles through translucent stage membranes."
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #08090b;
+        color: #ebe8e2;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        line-height: 1.7;
+        letter-spacing: 0.06em;
+        text-align: left;
+      }
+    </style>
+    <script type="module" crossorigin src="/pipeline-flux/assets/index-mcS1HO3E.js"></script>
+    <link rel="stylesheet" crossorigin href="/pipeline-flux/assets/index-DX9u-Q5-.css">
+  </head>
+  <body>
+    <div id="root">
+      <div id="boot"><p id="boot-msg" style="color: #6b6b78">Initializing…</p></div>
+    </div>
+    <noscript>
+      <p style="font-family: system-ui; padding: 2rem">
+        Pipeline Flux renders a live WebGL simulation and needs JavaScript enabled.
+      </p>
+    </noscript>
+    <script>
+      // If the bundle fails to parse or throws before React mounts, the page would
+      // otherwise be silently black. Paint the reason instead.
+      (function () {
+        var msg = document.getElementById('boot-msg')
+        function show(text) {
+          if (!msg) return
+          msg.textContent = text
+          msg.style.color = '#f5a524'
+          msg.style.whiteSpace = 'pre-wrap'
+        }
+        window.addEventListener('error', function (event) {
+          show(
+            'Startup error\n\n' +
+              (event.message || 'unknown error') +
+              '\n' +
+              (event.filename || '') +
+              (event.lineno ? ':' + event.lineno : ''),
+          )
+        })
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason
+          show('Startup rejection\n\n' + ((reason && reason.message) || String(reason)))
+        })
+      })()
+    </script>
+  </body>
+</html>
